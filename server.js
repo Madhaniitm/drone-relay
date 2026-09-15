@@ -60,7 +60,7 @@ app.get('/snapshot.jpg', requireControlKey, (req, res) => {
   res.send(lastFrame);
 });
 
-app.get('/verbalize', requireControlKey, async (req, res) => {
+app.get('/verbalize', async (req, res) => {
   if (!lastFrame) return res.sendStatus(503);
   const imageUrl = `${req.protocol}://${req.get('host')}/snapshot.jpg?key=${CONTROL_KEY}`;
   try {
