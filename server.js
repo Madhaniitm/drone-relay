@@ -1,11 +1,15 @@
 const express = require('express');
 const cors = require('cors');
+const { GoogleGenAI } = require('@google/genai');
 
 const PORT = process.env.PORT || 3000;
 const DEVICE_SECRET = process.env.DEVICE_SECRET || 'changeme-device-secret';
 const CONTROL_KEY = process.env.CONTROL_KEY || 'changeme-control-key';
 
+const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
 const app = express();
+app.set('trust proxy', true); // Render sits behind a proxy; needed for req.protocol to report https
 // The React widget runs on Kissflow's own domain, so calls into this relay
 // are cross-origin. The X-Control-Key/X-Device-Secret checks are the real
 // gate, so allowing any origin here is fine.
@@ -54,6 +58,29 @@ app.get('/snapshot.jpg', requireControlKey, (req, res) => {
   res.set('Content-Type', 'image/jpeg');
   res.set('Cache-Control', 'no-store');
   res.send(lastFrame);
+});
+
+app.get('/verbalize', requireControlKey, async (req, res) => {
+  if (!lastFrame) return res.sendStatus(503);
+  const imageUrl = `${req.protocol}://${req.get('host')}/snapshot.jpg?key=${CONTROL_KEY}`;
+  try {
+    const response = await genai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: "Describe what's visible in this drone camera image in one or two sentences." },
+            { inlineData: { mimeType: 'image/jpeg', data: lastFrame.toString('base64') } },
+          ],
+        },
+      ],
+    });
+    res.json({ caption: response.text ?? '', image_url: imageUrl });
+  } catch (err) {
+    console.error('verbalize failed:', err);
+    res.status(500).json({ error: 'verbalize failed', detail: String(err) });
+  }
 });
 
 app.get('/panel', requireControlKey, (req, res) => {
