@@ -42,6 +42,7 @@ app.get('/command', requireDeviceSecret, (req, res) => {
 app.post('/command', requireControlKey, (req, res) => {
   const { motor, speed } = req.body || {};
   const clamped = Math.max(0, Math.min(255, Number(speed) || 0));
+  console.log(`slider command received: motor ${motor} -> ${clamped}`);
   if (motor === 1) command.motor1 = clamped;
   else if (motor === 2) command.motor2 = clamped;
   else return res.sendStatus(400);
