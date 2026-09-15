@@ -76,7 +76,19 @@ app.get('/verbalize', requireControlKey, async (req, res) => {
         },
       ],
     });
-    res.json({ caption: response.text ?? '', image_url: imageUrl });
+    const usage = response.usageMetadata || {};
+    res.json({
+      caption: response.text ?? '',
+      image_url: imageUrl,
+      model: response.modelVersion ?? '',
+      response_id: response.responseId ?? '',
+      finish_reason: response.candidates?.[0]?.finishReason ?? '',
+      prompt_tokens: usage.promptTokenCount ?? 0,
+      output_tokens: usage.candidatesTokenCount ?? 0,
+      thoughts_tokens: usage.thoughtsTokenCount ?? 0,
+      total_tokens: usage.totalTokenCount ?? 0,
+      captured_at: new Date().toISOString(),
+    });
   } catch (err) {
     console.error('verbalize failed:', err);
     res.status(500).json({ error: 'verbalize failed', detail: String(err) });
